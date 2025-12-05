@@ -30,6 +30,38 @@ No prompt framework, no third-party launcher, no hidden magic.
 
 ---
 
+## ⛓️ Prerequisites
+
+To use this configuration as-is you need the following pieces already installed on the machine:
+
+`Homebrew` (Apple Silicon build) for the PATH assumptions
+
+```
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+```
+
+`fnm` to manage Node versions on directory change
+
+```
+brew install fnm
+```
+
+`Bun` for project scaffolding and dependency installs
+
+```
+curl -fsSL https://bun.sh/install | bash
+```
+
+`Node.js` runtime exposed through `fnm` or your preferred manager
+
+```
+fnm install <version>
+```
+
+Once these are present, sourcing `.zshrc` works without additional tweaks.
+
+---
+
 ## ⚙️ Performance & Core ZSH
 
 - `compinit` optimized with cache (`.zcompdump`)

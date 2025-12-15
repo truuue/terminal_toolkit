@@ -40,6 +40,12 @@ To use this configuration as-is you need the following pieces already installed 
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 ```
 
+`Tree` Display directories as trees
+
+```
+brew install tree
+```
+
 `fnm` to manage Node versions on directory change
 
 ```

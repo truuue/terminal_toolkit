@@ -330,7 +330,7 @@ dev
 
 ## 🧾 License
 
-Personal configuration — free to reuse, adapt, and draw inspiration from.
+Personal configuration - free to reuse, adapt, and draw inspiration from.
 
 ---
 

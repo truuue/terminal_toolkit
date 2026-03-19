@@ -2,6 +2,13 @@
 # ZSH CORE
 ##########
 
+# Dédupliquer le PATH
+typeset -U PATH
+
+# Locale
+export LANG="fr_FR.UTF-8"
+export LC_ALL="fr_FR.UTF-8"
+
 # Performance & sécurité
 export ZSH_DISABLE_COMPFIX=true
 ZSH_COMPDUMP="$HOME/.zcompdump"
@@ -51,9 +58,16 @@ export PATH="$BUN_INSTALL/bin:$PATH"
 # Package managers
 alias p="pnpm"
 alias b="bun"
-alias r="run"
-alias d="dev"
+alias bi="bun install"
+alias br="bun run"
+alias bd="bun dev"
+alias bb="bun build"
+alias bt="bun test"
 alias brd="bun run dev"
+
+# Cleanup
+alias bclean="rm -rf node_modules bun.lockb && bun install"
+alias bcache="rm -rf ~/.bun/install/cache"
 
 # Git
 alias gs='git status'
@@ -68,6 +82,43 @@ alias now='date "+%Y-%m-%d %H:%M"'
 
 # Network
 alias ifc='ifconfig'
+
+# Docker shortcuts
+alias dk="docker"
+
+# Docker Compose
+alias dc="docker compose"
+alias dcu="docker compose up"
+alias dcud="docker compose up -d"
+alias dcd="docker compose down"
+alias dcr="docker compose restart"
+alias dcp="docker compose ps"
+alias dcdev="docker compose --profile dev up --build"
+alias dcdevd="docker compose --profile dev up --build -d"
+alias dcdevdown="docker compose --profile dev down"
+alias dcdevlogs="docker compose --profile dev logs -f"
+alias dcdevr="docker compose --profile dev restart"
+alias dcdevrebuild="docker compose --profile dev build --no-cache"
+
+# Docker containers
+alias dps="docker ps"
+alias dpsa="docker ps -a"
+alias dtop="docker stats"
+
+# Docker cleanup
+dclean() {
+  echo -n "Supprimer tous les containers, images et volumes Docker ? (o/N) "
+  read yn
+  [[ "$yn" == "o" ]] && docker system prune -af --volumes
+}
+dkill() { docker kill $(docker ps -q) }
+
+# Docker images
+alias dimages="docker images"
+drmi() { docker rmi $(docker images -q) }
+
+# Claude Code
+alias ccp="npx claude-code-templates@latest --plugins"
 
 
 #################
@@ -256,6 +307,10 @@ rem() {
     return 1
   fi
 
+  echo -n "Supprimer le projet '$project' ? (o/N) "
+  read yn
+  [[ "$yn" != "o" ]] && return 0
+
   # Supprime le dossier du projet
   rm -rf "$project_dir"
 
@@ -268,6 +323,81 @@ rem() {
   [[ "$LAST_PROJECT" == "$project" ]] && export LAST_PROJECT=""
 
   echo "Suppression terminée."
+}
+
+
+##########################
+# LIST PROJECTS (lsproj)
+##########################
+
+lsp() {
+  echo "Projects in $DEV"
+  echo "──────────────────────────────"
+
+  if [[ ! -d "$DEV" ]]; then
+    echo "No DEV directory found."
+    return 1
+  fi
+
+  local project
+
+  for project in "$DEV"/*; do
+    [[ -d "$project" ]] || continue
+
+    local name=$(basename "$project")
+    local hist="$HOME/.zsh_history_$name"
+
+    if [[ -f "$hist" ]]; then
+      printf "%-20s  (history: YES)\n" "$name"
+    else
+      printf "%-20s  (history: NO)\n" "$name"
+    fi
+  done
+}
+
+
+#########################
+# WIPE PROJECT HISTORY
+#########################
+
+wipehist() {
+  local devpath="${DEV:A}"
+
+  # Vérifier que l'on est dans un projet
+  if [[ "$PWD" != "$devpath"* ]]; then
+    echo "You are not inside a project directory."
+    return 1
+  fi
+
+  # Extraction du nom du projet
+  local rest="${PWD#$devpath/}"
+  local project="${rest%%/*}"
+  local hist="$HOME/.zsh_history_$project"
+
+  if [[ ! -f "$hist" ]]; then
+    echo "No history file found for project '$project'."
+    return 0
+  fi
+
+  echo "🔧 Disabling history temporarily…"
+  setopt LOCAL_OPTIONS
+  unsetopt HIST_IGNORE_ALL_DUPS
+  unsetopt SHARE_HISTORY
+  unsetopt APPEND_HISTORY
+
+  # Désactiver complètement l’historique
+  unset HISTFILE
+
+  # Suppression totale du fichier d’historique
+  rm -f "$hist"
+  touch "$hist"
+
+  echo "History wiped (0 bytes) for project: $project"
+
+  # On NE recharge PAS l'historique ici → c'est volontaire
+  # Zsh réinitialisera tranquillement sur la prochaine commande
+
+  # End of function → LOCAL_OPTIONS restore le contexte automatiquement
 }
 
 
@@ -310,6 +440,27 @@ up() {
 reset() {
   clean
   up
+}
+
+# Docker
+dcl() {
+  docker compose logs -f "$1"
+}
+
+dex() {
+  docker exec -it "$1" sh
+}
+
+dbash() {
+  docker exec -it "$1" bash || docker exec -it "$1" sh
+}
+
+bkill() { pkill -f bun 2>/dev/null; echo "Processus bun arrêtés." }
+
+breset() {
+  bkill
+  bclean
+  bd
 }
 
 
@@ -371,17 +522,10 @@ host_color() {
   [[ -n "$SSH_CONNECTION" ]] && echo '%F{red}' || echo '%F{cyan}'
 }
 
-# Branche git (avec cache)
-_git_branch_cached=""
-_git_pwd_cached=""
-
+# Branche git
 git_branch() {
-  if [[ "$PWD" != "$_git_pwd_cached" ]]; then
-    _git_pwd_cached="$PWD"
-    _git_branch_cached=$(git symbolic-ref --short HEAD 2>/dev/null)
-  fi
-
-  [[ -n "$_git_branch_cached" ]] && echo " %F{magenta}$_git_branch_cached%f"
+  local b=$(git symbolic-ref --short HEAD 2>/dev/null)
+  [[ -n "$b" ]] && echo " %F{magenta}$b%f"
 }
 
 # Prompt custom
@@ -389,5 +533,3 @@ PROMPT='$(host_color)%n@%m%f %F{green}%1~%f$(git_branch) %F{green}➜%f '
 
 # Init historique au lancement
 _project_history
-
-
